@@ -2,6 +2,7 @@ import {Router} from 'express';
 import {RoomService} from "../services/room.service";
 import {Room} from "../models/room.model";
 import logger from "../config/logger";
+import {StatusCodes} from "http-status-codes";
 
 /**
  * Defines the routes for room-related operations.
@@ -16,14 +17,14 @@ export const roomRoutes = (roomService: RoomService): Router => {
      * @swagger
      * /api/rooms:
      *   get:
-     *     summary: Returns a simple message indicating the Rooms API.
+     *     summary: Returns a simple message indicating the Rooms API used to test the app.
      *     responses:
      *       200:
-     *         description: A simple message.
+     *         description: A simple message to test the app.
      */
     router.get('/', async (req, res) => {
         logger.info("Rooms API");
-        res.json("Rooms API");
+        res.json("Successfully queried Rooms API in the websocket microservice ! The JWT was successfully validated.");
     });
 
     /**
@@ -94,7 +95,7 @@ export const roomRoutes = (roomService: RoomService): Router => {
             });
             res.json("Users added to room");
         } catch (error) {
-            res.status(500).json(error);
+            res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(error);
         }
     });
 
@@ -153,7 +154,7 @@ export const roomRoutes = (roomService: RoomService): Router => {
             res.json("User added to room");
         }
         catch (error) {
-            res.status(500).json(error);
+            res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(error);
         }
     });
 
@@ -212,7 +213,7 @@ export const roomRoutes = (roomService: RoomService): Router => {
             res.json("User added to room");
         }
         catch (error) {
-            res.status(500).json(error);
+            res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(error);
         }
     });
 

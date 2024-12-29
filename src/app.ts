@@ -12,13 +12,16 @@ import logger from './config/logger';
 import {roomRoutes} from './routes/room.route';
 import {setupSwagger} from "./config/swagger";
 import {authMiddleware} from "./middleware/jwt.middleware";
+import {QueueEnum} from "./models/enums/queue.enum";
+import {QueueMessageHandlers} from "./handlers/queue.handler";
 
 export class App {
     public app: Application;
     public server: HttpServer;
     public io: SocketServer;
-    private readonly wsService: WebSocketService;
     private queueService: QueueService;
+    private queueHandlers: QueueMessageHandlers;
+    private readonly wsService: WebSocketService;
     private readonly redisService: RedisService;
     private readonly roomService: RoomService;
 
@@ -41,8 +44,9 @@ export class App {
             redisService: this.redisService
         });
         this.queueService = QueueService.getInstance(config, this.wsService);
+        this.queueHandlers = QueueMessageHandlers.getInstance(config, this.wsService);
 
-        this.initializeServices();
+        this.initializeQueueService();
         this.initializeMiddlewares();
         this.initializeRoutes();
         this.initializeSwagger();
@@ -50,12 +54,22 @@ export class App {
         this.initializeErrorHandling();
     }
 
-    private async initializeServices(): Promise<void> {
+    private async initializeQueueService(): Promise<void> {
         try {
+            this.queueService.registerQueueHandler(
+                QueueEnum.WS_CHAT_MESSAGE,
+                this.queueHandlers.handleChatMessage.bind(this.queueHandlers)
+            );
+
+            // this.queueService.registerQueueHandler(
+            //     QueueEnum.WS_NOTIFICATION,
+            //     this.queueHandlers.handleNotification.bind(this.queueHandlers)
+            // );
+
             await this.queueService.connect();
             logger.info('Queue service initialized successfully');
         } catch (error) {
-            logger.error(`Error initializing queue service: ${error}`);
+            logger.error('Error initializing queue service:', error);
             throw error;
         }
     }
@@ -64,7 +78,7 @@ export class App {
         this.app.use(express.json());
         this.app.use(express.urlencoded({extended: true}));
         this.app.use(cors({
-            origin: 'http://localhost:5173',
+            origin: 'http://localhost:5173', // TODO : change to gateway URL
             methods: ['GET', 'POST', 'PUT', 'DELETE'],
             allowedHeaders: ['Content-Type', 'Authorization']
         }));

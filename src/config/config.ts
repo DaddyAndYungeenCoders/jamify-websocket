@@ -17,13 +17,12 @@ export const config: Config = {
         port: parseInt(process.env.ACTIVEMQ_PORT || '61613'),
         username: process.env.ACTIVEMQ_USERNAME || 'admin',
         password: process.env.ACTIVEMQ_PASSWORD || 'admin',
-        queues: {
-            incoming: process.env.QUEUE_INCOMING || 'jamify.app.save-and-repub',
-            outgoing: process.env.QUEUE_OUTGOING || 'jamify.chat.send-message'
-        }
     },
     ws: {
-        messageChannel: 'new-message',
+        channel: {
+            message: process.env.WS_MESSAGE_CHANNEL || 'new-message',
+            notification: process.env.WS_NOTIFICATION_CHANNEL || 'new-notification'
+        }
     },
     jwt: {
         algorithms: ['RS256'] as Algorithm[],

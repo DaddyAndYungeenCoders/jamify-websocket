@@ -66,8 +66,12 @@ export class WebSocketService {
      * @param {any} data - The data to broadcast.
      */
     public async broadcastToRoom(roomId: string, event: string, data: any): Promise<void> {
-        logger.info(`Broadcasting to room ${roomId}: ${data.toString()}`);
-        this.io.to(roomId).emit(event, data);
+        if (roomId && event) {
+            logger.info(`Broadcasting to room ${roomId}: ${data.toString()}`);
+            this.io.to(roomId).emit(event, data);
+        } else {
+            throw new Error('Room ID and event name are required to broadcast message');
+        }
     }
 
     /**

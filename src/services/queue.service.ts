@@ -4,6 +4,7 @@ import {ConnectOptions} from "../models/interfaces/connect-options.interface";
 import {ChatMessage} from "../models/interfaces/chat-message.interface";
 import logger from "../config/logger";
 import {WebSocketService} from "./websocket.service";
+import {QueueHandler} from "../models/interfaces/queue-handler.interface";
 
 /**
  * Service for managing the connection to ActiveMQ and handling message publishing and subscribing.
@@ -14,13 +15,14 @@ export class QueueService {
     private readonly config: Config;
     private readonly wsService: WebSocketService;
     private isActiveMqAvailable: boolean = false; // Connection status flag
+    private queueHandlers: Map<string, QueueHandler> = new Map();
 
     private static instance: QueueService;
 
     /**
      * Private constructor to enforce singleton pattern.
-     * @param config - Configuration object.
-     * @param webSocketService - WebSocket manager instance.
+     * @param {Config} config - Configuration object.
+     * @param {WebSocketService} webSocketService - WebSocket manager instance.
      */
     private constructor(config: Config, webSocketService: WebSocketService) {
         this.config = config;
@@ -29,9 +31,9 @@ export class QueueService {
 
     /**
      * Returns the singleton instance of QueueService.
-     * @param config - Configuration object.
-     * @param webSocketService - WebSocket manager instance.
-     * @returns The singleton instance of QueueService.
+     * @param {Config} config - Configuration object.
+     * @param {WebSocketService} webSocketService - WebSocket manager instance.
+     * @returns {QueueService} The singleton instance of QueueService.
      */
     public static getInstance(config: Config, webSocketService: WebSocketService): QueueService {
         if (!QueueService.instance) {
@@ -42,9 +44,9 @@ export class QueueService {
 
     /**
      * Connects to ActiveMQ with retry logic.
-     * @param retries - Number of retry attempts.
-     * @param delayMs - Delay between retries in milliseconds.
-     * @returns A promise that resolves when the connection is successful.
+     * @param {number} [retries=5] - Number of retry attempts.
+     * @param {number} [delayMs=3000] - Delay between retries in milliseconds.
+     * @returns {Promise<void>} A promise that resolves when the connection is successful.
      */
     public async connect(retries: number = 5, delayMs: number = 3000): Promise<void> {
         const connectOptions: ConnectOptions = {
@@ -79,8 +81,8 @@ export class QueueService {
 
     /**
      * Delays execution for a specified number of milliseconds.
-     * @param ms - Number of milliseconds to delay.
-     * @returns A promise that resolves after the specified delay.
+     * @param {number} ms - Number of milliseconds to delay.
+     * @returns {Promise<void>} A promise that resolves after the specified delay.
      */
     private delay(ms: number): Promise<void> {
         return new Promise(resolve => setTimeout(resolve, ms));
@@ -88,8 +90,8 @@ export class QueueService {
 
     /**
      * Creates a client connection to ActiveMQ.
-     * @param options - Connection options.
-     * @returns A promise that resolves with the client instance.
+     * @param {ConnectOptions} options - Connection options.
+     * @returns {Promise<Client>} A promise that resolves with the client instance.
      */
     private createClient(options: ConnectOptions): Promise<Client> {
         return new Promise((resolve, reject) => {
@@ -104,70 +106,48 @@ export class QueueService {
     }
 
     /**
-     * Publishes a message to the ActiveMQ queue.
-     * @param message - The chat message to publish.
-     * @returns A promise that resolves when the message is published.
-     * @throws Error if the messaging service is unavailable or the publisher is not connected.
+     * Registers a handler for a specific queue.
+     * @param {string} queueName - Name of the queue to subscribe to.
+     * @param {(message: any) => Promise<void>} handler - Function to handle messages from this queue.
      */
-    public async publishMessage(message: ChatMessage): Promise<void> {
-        logger.info(`Publishing message: ${JSON.stringify(message)}`);
-        if (!this.isActiveMqAvailable) {
-            logger.error('Messaging service is unavailable due to connection issues');
-            throw new Error('Messaging service is unavailable due to connection issues');
-        }
-
-        if (!this.publishClient) {
-            logger.error('Publisher not connected');
-            throw new Error('Publisher not connected');
-        }
-
-        return new Promise((resolve, reject) => {
-            const headers = {
-                destination: `/queue/${this.config.activemq.queues.incoming}`,
-                'content-type': 'application/json'
-            };
-
-            if (this.publishClient) {
-                const frame = this.publishClient.send(headers);
-                frame.write(JSON.stringify(message));
-                frame.end();
-                logger.info(`Message published: ${JSON.stringify(message)}`);
-                resolve();
-            } else {
-                reject(new Error('Publish client is null'));
-            }
+    public registerQueueHandler(queueName: string, handler: (message: any) => Promise<void>) {
+        this.queueHandlers.set(queueName, {
+            queue: queueName,
+            handler: handler
         });
+
+        // If already connected, set up the subscription for this queue
+        if (this.subscribeClient && this.isActiveMqAvailable) {
+            this.subscribeToQueue(queueName, handler);
+        }
     }
 
     /**
-     * Sets up the consumer to listen for messages from the ActiveMQ queue.
-     * @returns A promise that resolves when the consumer is set up.
-     * @throws Error if the subscriber is not connected.
+     * Subscribes to a specific queue and sets up the message handler.
+     * @param {string} queueName - Name of the queue to subscribe to.
+     * @param {(message: any) => Promise<void>} handler - Function to handle messages from this queue.
+     * @returns {Promise<void>} A promise that resolves when the subscription is set up.
+     * @throws {Error} If the subscriber is not connected.
      */
-    // TODO
-    private async setupConsumer(): Promise<void> {
+    private async subscribeToQueue(queueName: string, handler: (message: any) => Promise<void>): Promise<void> {
         if (!this.subscribeClient) {
-            logger.error('Subscriber not connected');
             throw new Error('Subscriber not connected');
         }
 
         const subscribeHeaders = {
-            destination: `/queue/${this.config.activemq.queues.outgoing}`,
+            destination: `/queue/${queueName}`,
             ack: 'client-individual'
         };
 
         this.subscribeClient.subscribe(subscribeHeaders, (error: Error | null, message) => {
             if (error) {
-                logger.error(`Subscribe error: ${error}`);
+                logger.error(`Subscribe error for queue ${queueName}:`, error);
                 return;
             }
 
-            message.readString('utf-8', (error: Error | null, body?: string) => {
-                if (body) {
-                    logger.info(`Received message: ${JSON.parse(body) as ChatMessage}`);
-                }
+            message.readString('utf-8', async (error: Error | null, body?: string) => {
                 if (error || !body) {
-                    logger.error(`Read message error: ${error}`);
+                    logger.error(`Read message error for queue ${queueName}:`, error);
                     if (this.subscribeClient) {
                         this.subscribeClient.nack(message);
                     }
@@ -175,13 +155,13 @@ export class QueueService {
                 }
 
                 try {
-                    const messageData = JSON.parse(body) as ChatMessage;
-                    this.handleProcessedMessage(messageData);
+                    const messageData = JSON.parse(body);
+                    await handler(messageData);
                     if (this.subscribeClient) {
                         this.subscribeClient.ack(message);
                     }
                 } catch (error) {
-                    logger.error(`Process message error: ${error}`);
+                    logger.error(`Process message error for queue ${queueName}:`, error);
                     if (this.subscribeClient) {
                         this.subscribeClient.nack(message);
                     }
@@ -191,16 +171,33 @@ export class QueueService {
     }
 
     /**
+     * Sets up the consumer to listen for messages from the ActiveMQ queue.
+     * @returns {Promise<void>} A promise that resolves when the consumer is set up.
+     * @throws {Error} If the subscriber is not connected.
+     */
+    private async setupConsumer(): Promise<void> {
+        if (!this.subscribeClient) {
+            throw new Error('Subscriber not connected');
+        }
+
+        // Set up subscriptions for all registered queues
+        for (const [queueName, queueHandler] of this.queueHandlers) {
+            await this.subscribeToQueue(queueName, queueHandler.handler);
+            logger.info(`Subscribed to queue: ${queueName}`);
+        }
+    }
+
+    /**
      * Handles the processed message by broadcasting it to the appropriate WebSocket room.
-     * @param message - The chat message to process.
-     * @returns A promise that resolves when the message is broadcasted.
-     * @throws Error if broadcasting fails.
+     * @param {ChatMessage} message - The chat message to process.
+     * @returns {Promise<void>} A promise that resolves when the message is broadcasted.
+     * @throws {Error} If broadcasting fails.
      */
     private async handleProcessedMessage(message: ChatMessage): Promise<void> {
         logger.info(`Processing message: ${JSON.stringify(message)}`);
         try {
             if (message.roomId) {
-                await this.wsService.broadcastToRoom(message.roomId, this.config.ws.messageChannel, message);
+                await this.wsService.broadcastToRoom(message.roomId, this.config.ws.channel.message, message);
             }
         } catch (error) {
             logger.error(`Error broadcasting message: ${error}`);
@@ -210,8 +207,8 @@ export class QueueService {
 
     /**
      * Disconnects from ActiveMQ.
-     * @returns A promise that resolves when the disconnection is complete.
-     * @throws Error if disconnection fails.
+     * @returns {Promise<void>} A promise that resolves when the disconnection is complete.
+     * @throws {Error} If disconnection fails.
      */
     public async disconnect(): Promise<void> {
         try {
