@@ -1,0 +1,32 @@
+services:
+  redis:
+    image: redis:6.2.5
+    container_name: redis
+    environment:
+      - REDIS_PASSWORD=admin
+    command: [
+      "redis-server",
+      "--requirepass", "admin",
+      "--appendonly", "yes",
+      "--maxmemory", "256mb",
+      "--maxmemory-policy", "allkeys-lru"
+    ]
+    ports:
+      - "6379:6379"
+
+# ONLY FOR DEVELOPMENT
+  activemq:
+    image: symptoma/activemq:5.18.3
+    container_name: activemq
+    ports:
+      - "61616:61616"
+      - "61613:61613"
+      - "8161:8161"
+    environment:
+      ACTIVEMQ_DISALLOW_WEBCONSOLE: "false"
+      ACTIVEMQ_USERNAME: "myuser"
+      ACTIVEMQ_PASSWORD: "mypwd"
+      ACTIVEMQ_WEBADMIN_USERNAME: "admin"
+      ACTIVEMQ_WEBADMIN_PASSWORD: "admin"
+
+
