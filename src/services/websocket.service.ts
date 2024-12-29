@@ -10,14 +10,27 @@ interface WebSocketServiceConfig {
 export class WebSocketService {
     private io: Server;
     private redisService: RedisService;
-    private serverId: string;
+    private readonly serverId: string;
 
+    /**
+     * Creates an instance of WebSocketService.
+     *
+     * @param {Server} io - The Socket.io server instance.
+     * @param {WebSocketServiceConfig} config - The configuration object.
+     * @param {string} config.serverId - The ID of the server.
+     * @param {RedisService} config.redisService - The Redis service instance.
+     */
     constructor(io: Server, config: WebSocketServiceConfig) {
         this.io = io;
         this.redisService = config.redisService;
         this.serverId = config.serverId;
     }
 
+    /**
+     * Handles a new client connection.
+     *
+     * @param {Socket} socket - The connected client's socket.
+     */
     public handleConnection(socket: Socket): void {
         logger.info(`New client connected: ${socket.id}`);
 
@@ -45,11 +58,24 @@ export class WebSocketService {
         });
     }
 
+    /**
+     * Broadcasts a message to a specific room.
+     *
+     * @param {string} roomId - The ID of the room.
+     * @param {string} event - The event name.
+     * @param {any} data - The data to broadcast.
+     */
     public async broadcastToRoom(roomId: string, event: string, data: any): Promise<void> {
         logger.info(`Broadcasting to room ${roomId}: ${data.toString()}`);
         this.io.to(roomId).emit(event, data);
     }
 
+    /**
+     * Handles joining the user to their rooms.
+     *
+     * @param {Socket} socket - The connected client's socket.
+     * @param {string} userId - The ID of the user.
+     */
     private async handleUserRooms(socket: Socket, userId: string): Promise<void> {
         try {
             const userRooms = await this.redisService.getUserRooms(userId);

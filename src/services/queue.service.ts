@@ -144,6 +144,7 @@ export class QueueService {
      * @returns A promise that resolves when the consumer is set up.
      * @throws Error if the subscriber is not connected.
      */
+    // TODO
     private async setupConsumer(): Promise<void> {
         if (!this.subscribeClient) {
             logger.error('Subscriber not connected');

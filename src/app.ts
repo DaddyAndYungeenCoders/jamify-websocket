@@ -11,6 +11,7 @@ import {RoomService} from './services/room.service';
 import logger from './config/logger';
 import {roomRoutes} from './routes/room.route';
 import {setupSwagger} from "./config/swagger";
+import {authMiddleware} from "./middleware/jwt.middleware";
 
 export class App {
     public app: Application;
@@ -70,7 +71,7 @@ export class App {
     }
 
     private initializeRoutes(): void {
-        this.app.use('/api/rooms', roomRoutes(this.roomService));
+        this.app.use('/api/rooms', authMiddleware, roomRoutes(this.roomService));
     }
 
     private initializeSwagger(): void {
