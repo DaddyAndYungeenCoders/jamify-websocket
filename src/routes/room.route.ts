@@ -56,7 +56,7 @@ export const roomRoutes = (roomService: RoomService): Router => {
 
         const {userId, destId} = req.body;
         const roomId = roomService.generatePrivateRoomId(userId, destId)
-        const roomExists: boolean = await roomService.isRoomExists(roomId);
+        const roomExists: boolean = await roomService.roomExistsById(roomId);
         if (!roomExists) {
             room = await roomService.createPrivateRoom(userId, destId);
         } else {
@@ -214,6 +214,41 @@ export const roomRoutes = (roomService: RoomService): Router => {
         }
         catch (error) {
             res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(error);
+        }
+    });
+
+
+    /**
+     * @swagger
+     * /api/rooms/existById/{roomId}:
+     *   get:
+     *     summary: Checks if a room exists by its ID.
+     *     parameters:
+     *       - in: path
+     *         name: roomId
+     *         schema:
+     *           type: string
+     *         required: true
+     *         description: The ID of the room.
+     *     responses:
+     *       200:
+     *          description: A message indicating if the room exists.
+     *          content:
+     *              application/json:
+     *                  schema:
+     *                      type: object
+     *                      properties:
+     *                          exists:
+     *                              type: boolean
+     *                              example: true
+     */
+    router.get('/existsById/:roomId', async (req, res) => {
+        const roomId = req.params.roomId;
+        const exists = await roomService.roomExistsById(roomId);
+        if (exists) {
+            res.status(StatusCodes.OK).json({exists: true});
+        } else {
+            res.status(StatusCodes.NOT_FOUND).json({exists: false});
         }
     });
 

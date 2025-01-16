@@ -1,6 +1,7 @@
 import {Server, Socket} from 'socket.io';
 import {RedisService} from './redis.service';
 import logger from '../config/logger';
+import {Notification} from "../models/interfaces/notification.interface";
 
 interface WebSocketServiceConfig {
     serverId: string;
@@ -71,6 +72,32 @@ export class WebSocketService {
             this.io.to(roomId).emit(event, data);
         } else {
             throw new Error('Room ID and event name are required to broadcast message');
+        }
+    }
+
+    /**
+     * Sends a notification to a specific destination.
+     *
+     * @param {string} destId - The ID of the destination.
+     * @param {string} channel - The channel name.
+     * @param {Notification} notification - The notification to send.
+     */
+    public async sendNotificationTo(destId: string | undefined, channel: string, notification: Notification): Promise<void> {
+        if (destId && destId.startsWith("jam") || destId && destId.startsWith("event")) {
+            if (!await this.redisService.roomExistsById(destId)) {
+                throw new Error(`Room ${destId} does not exist`);
+            }
+        } else {
+            if (destId && !await this.redisService.userExistsById(destId)) {
+                throw new Error(`User ${destId} does not exist or is not connected`);
+            }
+        }
+
+        if (destId && channel && notification) {
+            logger.info(`Send notification to ${destId}: ${JSON.stringify(notification)}`);
+            this.io.to(destId).emit(channel, notification);
+        } else {
+            throw new Error('Destination ID, channel, and notification are required to process notification');
         }
     }
 

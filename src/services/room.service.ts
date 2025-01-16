@@ -64,7 +64,7 @@ export class RoomService {
         return `${RoomPrefix.PRIVATE}${[user1Id, user2Id].sort().join('_')}`;
     }
 
-    isRoomExists(roomId: string) {
-        return this.redisService.isRoomExists(roomId);
+    async roomExistsById(roomId: string) {
+        return await this.redisService.roomExistsById(roomId);
     }
 }

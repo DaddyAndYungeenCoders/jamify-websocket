@@ -26,7 +26,7 @@ export const config: Config = {
     },
     jwt: {
         algorithms: ['RS256'] as Algorithm[],
-        jwksUri: process.env.JWT_JWKS_URI || 'http://localhost:8081/oauth/.well-known/jwks.json'
+        jwksUri: process.env.JWT_JWKS_URI || 'https://jamify.daddyornot.xyz/jamify-uaa/oauth/.well-known/jwks.json'
     }
 
 };

@@ -14,6 +14,8 @@ import {setupSwagger} from "./config/swagger";
 import {authMiddleware} from "./middleware/jwt.middleware";
 import {QueueEnum} from "./models/enums/queue.enum";
 import {QueueMessageHandlers} from "./handlers/queue.handler";
+import {userRoutes} from "./routes/user.route";
+import {UserService} from "./services/user.service";
 
 export class App {
     public app: Application;
@@ -24,6 +26,7 @@ export class App {
     private readonly wsService: WebSocketService;
     private readonly redisService: RedisService;
     private readonly roomService: RoomService;
+    private readonly userService: UserService;
 
     constructor(config: Config) {
         this.app = express();
@@ -39,6 +42,7 @@ export class App {
 
         this.redisService = RedisService.getInstance(config.redis);
         this.roomService = RoomService.getInstance(this.redisService);
+        this.userService = UserService.getInstance(this.redisService);
         this.wsService = new WebSocketService(this.io, {
             serverId: config.serverId,
             redisService: this.redisService
@@ -61,10 +65,10 @@ export class App {
                 this.queueHandlers.handleChatMessage.bind(this.queueHandlers)
             );
 
-            // this.queueService.registerQueueHandler(
-            //     QueueEnum.WS_NOTIFICATION,
-            //     this.queueHandlers.handleNotification.bind(this.queueHandlers)
-            // );
+            this.queueService.registerQueueHandler(
+                QueueEnum.WS_NOTIFICATION,
+                this.queueHandlers.handleNotification.bind(this.queueHandlers)
+            );
 
             await this.queueService.connect();
             logger.info('Queue service initialized successfully');
@@ -86,6 +90,7 @@ export class App {
 
     private initializeRoutes(): void {
         this.app.use('/api/rooms', authMiddleware, roomRoutes(this.roomService));
+        this.app.use('/api/users', authMiddleware, userRoutes(this.userService));
     }
 
     private initializeSwagger(): void {

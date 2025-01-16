@@ -3,6 +3,7 @@ import {WebSocketService} from '../services/websocket.service';
 import {Config} from "../models/interfaces/config.interface";
 import {ChatMessage} from "../models/interfaces/chat-message.interface";
 import logger from "../config/logger";
+import {Notification} from "../models/interfaces/notification.interface";
 
 export class QueueMessageHandlers {
 
@@ -57,22 +58,21 @@ export class QueueMessageHandlers {
      * @param {Notification} notification - The notification object.
      * @returns {Promise<void>} A promise that resolves when the notification is handled.
      */
-    // TODO : when notification is implemented
-    // public async handleNotification(notification: Notification): Promise<void> {
-    //     if (!notification.destId) {
-    //         logger.error('Invalid notification: missing destId', notification);
-    //         return;
-    //     }
-    //
-    //     try {
-    //         await this.wsService.processNotification(
-    //             notification.destId,
-    //             this.config.ws.notificationChannel,
-    //             notification
-    //         );
-    //     } catch (error) {
-    //         logger.error('Error processing notification:', error);
-    //         throw error;
-    //     }
-    // }
+    public async handleNotification(notification: Notification): Promise<void> {
+        if (!notification.destId && !notification.roomId) {
+            logger.error('Invalid notification: missing destId and roomId', notification);
+            return;
+        }
+
+        try {
+            await this.wsService.sendNotificationTo(
+                notification.destId ? notification.destId : notification.roomId,
+                this.config.ws.channel.notification,
+                notification
+            );
+        } catch (error) {
+            logger.error('Error processing notification:', error);
+            throw error;
+        }
+    }
 }
