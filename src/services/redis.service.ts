@@ -47,15 +47,25 @@ export class RedisService {
         };
 
         try {
-            await Promise.all([
-                // Store the connection in the user's connections set
-                this.redis.sadd(
-                    `user:${userId}:connections`,
-                    JSON.stringify(connectionData)
-                ),
-                // Store the reverse relation socketId -> userId
-                this.redis.set(`socket:${socketId}:user`, userId)
-            ]);
+            // Use a multi to execute multiple commands atomically
+            const multi = this.redis.multi();
+
+            // Get the old user ID associated with the socket ID and remove the connection
+            const oldUserId = await this.getUserIdFromSocket(socketId);
+            if (oldUserId) {
+                multi.srem(
+                    `user:${oldUserId}:connections`,
+                    JSON.stringify({...connectionData, socketId})
+                );
+            }
+
+            multi.sadd(
+                `user:${userId}:connections`,
+                JSON.stringify(connectionData)
+            );
+            multi.set(`socket:${socketId}:user`, userId);
+
+            await multi.exec();
         } catch (error) {
             logger.error(`Error adding user connection: ${error}`);
             throw new Error('Failed to add user connection');
@@ -250,5 +260,41 @@ export class RedisService {
     async userExistsById(userId: string): Promise<boolean> {
         const exists = await this.redis.exists(`user:${userId}`);
         return exists === 1;
+    }
+
+    /**
+     * Retrieves the socket ID associated with a user ID from Redis.
+     * @param userId
+     */
+    async getSocketFromUserId(userId: string): Promise<string | null> {
+        try {
+            const connections = await this.getAllUserConnections(userId);
+            // Prend la connexion la plus récente si plusieurs existent
+            const latestConnection = connections.sort((a, b) => b.timestamp - a.timestamp)[0];
+            return latestConnection?.socketId || null;
+        } catch (error) {
+            logger.error(`Error getting socket from userId: ${error}`);
+            throw new Error('Failed to get socket from userId');
+        }
+    }
+
+    /**
+     * Retrieves list of members in a room with their socket IDs.
+     * @param roomId
+     */
+    async getRoomMembers(roomId: string): Promise<{userId: string, socketId: string}[]> {
+        try {
+            const users = await this.getRoomUsers(roomId);
+            const memberDetails = await Promise.all(
+                users.map(async userId => {
+                    const socketId = await this.getSocketFromUserId(userId);
+                    return { userId, socketId: socketId || '' };
+                })
+            );
+            return memberDetails.filter(member => member.socketId);
+        } catch (error) {
+            logger.error(`Error getting room members: ${error}`);
+            throw new Error('Failed to get room members');
+        }
     }
 }

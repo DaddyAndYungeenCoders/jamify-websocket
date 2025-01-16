@@ -67,11 +67,21 @@ export class WebSocketService {
      * @param {any} data - The data to broadcast.
      */
     public async broadcastToRoom(roomId: string, event: string, data: any): Promise<void> {
-        if (roomId && event) {
-            logger.info(`Broadcasting to room ${roomId}: ${data.toString()}`);
-            this.io.to(roomId).emit(event, data);
-        } else {
+        if (!roomId || !event) {
             throw new Error('Room ID and event name are required to broadcast message');
+        }
+
+        try {
+            const roomExists = await this.redisService.roomExistsById(roomId);
+            if (!roomExists) {
+                throw new Error(`Room ${roomId} does not exist`);
+            }
+
+            logger.info(`Broadcasting to room ${roomId}: ${JSON.stringify(data)}`);
+            this.io.to(roomId).emit(event, data);
+        } catch (error) {
+            logger.error(`Broadcast error to room ${roomId}: ${error}`);
+            throw error;
         }
     }
 
@@ -95,10 +105,26 @@ export class WebSocketService {
 
         if (destId && channel && notification) {
             logger.info(`Send notification to ${destId}: ${JSON.stringify(notification)}`);
-            this.io.to(destId).emit(channel, notification);
+
+            if (destId.startsWith("jam") || destId.startsWith("event")) {
+                this.io.to(destId).emit(channel, notification);
+            } else {
+                const socketId = await this.redisService.getSocketFromUserId(destId);
+                if (socketId) {
+                    const socket = this.io.sockets.sockets.get(socketId);
+                    if (socket) {
+                        socket.emit(channel, notification);
+                    } else {
+                        throw new Error(`Socket ${socketId} not found for user ${destId}`);
+                    }
+                } else {
+                    throw new Error(`Socket for user ${destId} not found`);
+                }
+            }
         } else {
             throw new Error('Destination ID, channel, and notification are required to process notification');
         }
+
     }
 
     /**
@@ -110,11 +136,26 @@ export class WebSocketService {
     private async handleUserRooms(socket: Socket, userId: string): Promise<void> {
         try {
             const userRooms = await this.redisService.getUserRooms(userId);
-            for (const roomId of userRooms) {
-                socket.join(roomId);
+            if (userRooms.length === 0) {
+                logger.info(`No rooms found for user ${userId}`);
+                return;
             }
+
+            const joinPromises = userRooms.map(async (roomId) => {
+                const roomExists = await this.redisService.roomExistsById(roomId);
+                if (roomExists) {
+                    socket.join(roomId);
+                    logger.debug(`User ${userId} joined room ${roomId}`);
+                } else {
+                    logger.warn(`Room ${roomId} not found for user ${userId}`);
+                }
+            });
+
+            await Promise.all(joinPromises);
+            logger.info(`User ${userId} joined ${userRooms.length} rooms`);
         } catch (error) {
             logger.error(`Error joining user rooms: ${error}`);
+            socket.emit('room_join_error', { message: 'Failed to join rooms' });
         }
     }
 }
