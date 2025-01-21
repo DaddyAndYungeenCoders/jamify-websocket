@@ -8,8 +8,8 @@ import logger from "./config/logger";
 const app = new App(config);
 const server = app.getServer();
 
-const PORT = config.port || 3000;
-const HOST = config.host || 'localhost';
+const PORT = config.port || 3333;
+const HOST = config.host || "0.0.0.0";
 
 /**
  * Starts the server and logs the running status.

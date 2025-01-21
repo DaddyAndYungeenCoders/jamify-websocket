@@ -5,7 +5,7 @@ import {Algorithm} from "jsonwebtoken";
 export const config: Config = {
     mode: process.env.NODE_ENV || 'development',
     port: parseInt(process.env.PORT || '3333'),
-    host: process.env.HOST || 'localhost',
+    host: process.env.HOST || '0.0.0.0',
     serverId: process.env.SERVER_ID || uuidv4(),
     redis: {
         host: process.env.REDIS_HOST || 'localhost',
