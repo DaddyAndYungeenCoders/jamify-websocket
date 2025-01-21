@@ -73,7 +73,7 @@ export class RedisService {
     }
 
     /**
-     * Removes a user connection from Redis.
+     * Removes a user connection from Redis and its associated sockets.
      * @param {string} userId - The ID of the user.
      * @param {string} socketId - The socket ID of the connection.
      * @returns {Promise<void>} A promise that resolves when the connection is removed.
@@ -90,6 +90,11 @@ export class RedisService {
                     ),
                     this.redis.del(`socket:${socketId}:user`)
                 ]);
+            }
+
+            const socket = await this.getSocketFromUserId(userId);
+            if (socket) {
+                await this.redis.del(`socket:${socket}:user`);
             }
         } catch (error) {
             logger.error(`Error removing user connection: ${error}`);
@@ -156,11 +161,21 @@ export class RedisService {
      * @throws {Error} If retrieving the rooms fails.
      */
     async getUserRooms(userId: string): Promise<string[]> {
-        try {
-            return await this.redis.smembers(`user:${userId}:rooms`);
-        } catch (error) {
-            logger.error(`Error getting user rooms: ${error}`);
-            throw new Error('Failed to get user rooms');
+        const keys = await this.redis.keys(`user:*${userId}*:rooms`); // Trouver toutes les clés correspondantes
+        console.log("Clés trouvées :", keys);
+        // list of 'user:private-room_123_gze:rooms'
+
+        if (keys.length === 0) {
+            console.log("Aucune clé trouvée pour cet utilisateur.");
+            return [];
+        } else {
+            // get room for each key
+            const rooms = keys.map(key => {
+                return key.split(":")[1];
+            })
+
+            console.log("Rooms trouvées :", rooms);
+            return rooms.flat();
         }
     }
 
@@ -282,13 +297,13 @@ export class RedisService {
      * Retrieves list of members in a room with their socket IDs.
      * @param roomId
      */
-    async getRoomMembers(roomId: string): Promise<{userId: string, socketId: string}[]> {
+    async getRoomMembers(roomId: string): Promise<{ userId: string, socketId: string }[]> {
         try {
             const users = await this.getRoomUsers(roomId);
             const memberDetails = await Promise.all(
                 users.map(async userId => {
                     const socketId = await this.getSocketFromUserId(userId);
-                    return { userId, socketId: socketId || '' };
+                    return {userId, socketId: socketId || ''};
                 })
             );
             return memberDetails.filter(member => member.socketId);

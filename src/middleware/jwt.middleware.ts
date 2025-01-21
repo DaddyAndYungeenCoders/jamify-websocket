@@ -69,7 +69,7 @@ export const authMiddleware: RequestHandler = (
     jwt.verify(
         token,
         getKey, // Get the public key
-        {algorithms: config.jwt.algorithms, issuer: "http://localhost:8081"}, // Only allow the specified algorithms
+        {algorithms: config.jwt.algorithms, issuer: "https://jamify.daddyornot.xyz/jamify-uaa"}, // Only allow the specified algorithms
         (error: VerifyErrors | null, decoded: string | JwtPayload | undefined) => {
             if (error) {
                 logger.error(`JWT verification failed: ${error.message}`);

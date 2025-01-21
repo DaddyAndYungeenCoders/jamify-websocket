@@ -161,7 +161,7 @@ export class QueueService {
                         this.subscribeClient.ack(message);
                     }
                 } catch (error) {
-                    logger.error(`Process message error for queue ${queueName}:`, error);
+                    logger.error(`Process message error for queue '${queueName}':`, error);
                     if (this.subscribeClient) {
                         this.subscribeClient.nack(message);
                     }

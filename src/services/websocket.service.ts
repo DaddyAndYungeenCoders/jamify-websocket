@@ -2,6 +2,7 @@ import {Server, Socket} from 'socket.io';
 import {RedisService} from './redis.service';
 import logger from '../config/logger';
 import {Notification} from "../models/interfaces/notification.interface";
+import {RoomPrefix} from "../models/enums/room-prefix.enum";
 
 interface WebSocketServiceConfig {
     serverId: string;
@@ -57,6 +58,11 @@ export class WebSocketService {
                 logger.error(`Disconnect error: ${error}`);
             }
         });
+
+        socket.on("getRooms", () => {
+            console.log(`Rooms du client ${socket.id} :`, socket.rooms);
+            socket.emit("roomsList", Array.from(socket.rooms)); // Envoyer les rooms au client
+        });
     }
 
     /**
@@ -79,6 +85,7 @@ export class WebSocketService {
 
             logger.info(`Broadcasting to room ${roomId}: ${JSON.stringify(data)}`);
             this.io.to(roomId).emit(event, data);
+            logger.info(`Done broadcast to room ${roomId}: ${JSON.stringify(data)}`);
         } catch (error) {
             logger.error(`Broadcast error to room ${roomId}: ${error}`);
             throw error;
@@ -93,7 +100,7 @@ export class WebSocketService {
      * @param {Notification} notification - The notification to send.
      */
     public async sendNotificationTo(destId: string | undefined, channel: string, notification: Notification): Promise<void> {
-        if (destId && destId.startsWith("jam") || destId && destId.startsWith("event")) {
+        if (destId && destId.startsWith(RoomPrefix.JAM) || destId && destId.startsWith(RoomPrefix.EVENT)) {
             if (!await this.redisService.roomExistsById(destId)) {
                 throw new Error(`Room ${destId} does not exist`);
             }
@@ -106,7 +113,7 @@ export class WebSocketService {
         if (destId && channel && notification) {
             logger.info(`Send notification to ${destId}: ${JSON.stringify(notification)}`);
 
-            if (destId.startsWith("jam") || destId.startsWith("event")) {
+            if (destId.startsWith(RoomPrefix.JAM) || destId.startsWith(RoomPrefix.EVENT)) {
                 this.io.to(destId).emit(channel, notification);
             } else {
                 const socketId = await this.redisService.getSocketFromUserId(destId);
@@ -135,17 +142,18 @@ export class WebSocketService {
      */
     private async handleUserRooms(socket: Socket, userId: string): Promise<void> {
         try {
+            console.log("handleUserRooms");
             const userRooms = await this.redisService.getUserRooms(userId);
             if (userRooms.length === 0) {
                 logger.info(`No rooms found for user ${userId}`);
-                return;
+                // return;
             }
 
             const joinPromises = userRooms.map(async (roomId) => {
                 const roomExists = await this.redisService.roomExistsById(roomId);
                 if (roomExists) {
                     socket.join(roomId);
-                    logger.debug(`User ${userId} joined room ${roomId}`);
+                    logger.info(`User ${userId} joined room ${roomId}`);
                 } else {
                     logger.warn(`Room ${roomId} not found for user ${userId}`);
                 }
