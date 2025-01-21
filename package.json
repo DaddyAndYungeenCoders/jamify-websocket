@@ -1,7 +1,7 @@
 {
-  "name": "jamify-chat",
+  "name": "jamify-ws",
   "version": "1.0.0",
-  "description": "Chat microservice for jamify application",
+  "description": "Websocket microservice for Jamify",
   "main": "src/server.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -10,18 +10,18 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/DaddyAndYungeenCoders/jamify-chat.git"
+    "url": "git+https://github.com/DaddyAndYungeenCoders/jamify-wsgit"
   },
   "keywords": [
-    "chat",
+    "websocket",
     "microservice"
   ],
   "author": "DaddyAndYungeen",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/DaddyAndYungeenCoders/jamify-chat/issues"
+    "url": "https://github.com/DaddyAndYungeenCoders/jamify-ws/issues"
   },
-  "homepage": "https://github.com/DaddyAndYungeenCoders/jamify-chat#readme",
+  "homepage": "https://github.com/DaddyAndYungeenCoders/jamify-ws#readme",
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
