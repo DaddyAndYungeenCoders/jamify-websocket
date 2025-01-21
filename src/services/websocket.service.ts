@@ -58,11 +58,6 @@ export class WebSocketService {
                 logger.error(`Disconnect error: ${error}`);
             }
         });
-
-        socket.on("getRooms", () => {
-            console.log(`Rooms du client ${socket.id} :`, socket.rooms);
-            socket.emit("roomsList", Array.from(socket.rooms)); // Envoyer les rooms au client
-        });
     }
 
     /**
@@ -71,6 +66,7 @@ export class WebSocketService {
      * @param {string} roomId - The ID of the room.
      * @param {string} event - The event name.
      * @param {any} data - The data to broadcast.
+     * @throws {Error} - Throws an error if roomId or event is not provided or if the room does not exist.
      */
     public async broadcastToRoom(roomId: string, event: string, data: any): Promise<void> {
         if (!roomId || !event) {
@@ -98,6 +94,7 @@ export class WebSocketService {
      * @param {string} destId - The ID of the destination.
      * @param {string} channel - The channel name.
      * @param {Notification} notification - The notification to send.
+     * @throws {Error} - Throws an error if the destination, channel, or notification is not provided or if the destination does not exist.
      */
     public async sendNotificationTo(destId: string | undefined, channel: string, notification: Notification): Promise<void> {
         if (destId && destId.startsWith(RoomPrefix.JAM) || destId && destId.startsWith(RoomPrefix.EVENT)) {
@@ -167,6 +164,13 @@ export class WebSocketService {
         }
     }
 
+    /**
+     * Adds a user to a specific room.
+     *
+     * @param {string} roomId - The ID of the room.
+     * @param {string} userId - The ID of the user.
+     * @throws {Error} - Throws an error if the room does not exist or if the user is not connected.
+     */
     async addUserToRoom(roomId: string, userId: string) {
         try {
             const roomExists = await this.redisService.roomExistsById(roomId);
@@ -175,12 +179,12 @@ export class WebSocketService {
             }
 
             const socket = this.io.sockets.sockets.get(userId);
-                if (socket) {
-                    socket.join(roomId);
-                    logger.info(`User ${userId} joined room ${roomId}`);
-                } else {
-                    logger.warn(`User ${userId} not connected`);
-                }
+            if (socket) {
+                socket.join(roomId);
+                logger.info(`User ${userId} joined room ${roomId}`);
+            } else {
+                logger.warn(`User ${userId} not connected`);
+            }
 
             // logger.info(`Added user ${usersId[0]} and user ${usersId[1]} users to room ${roomId}`);
         } catch (error) {

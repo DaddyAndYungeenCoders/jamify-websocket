@@ -217,7 +217,6 @@ export const roomRoutes = (roomService: RoomService): Router => {
         }
     });
 
-
     /**
      * @swagger
      * /api/rooms/existById/{roomId}:

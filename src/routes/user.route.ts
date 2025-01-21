@@ -59,6 +59,23 @@ export const userRoutes = (userService: UserService): Router => {
         }
     });
 
+    /**
+     * @swagger
+     * /api/users/connnected:
+     *   get:
+     *     summary: Get all connected users.
+     *     responses:
+     *       200:
+     *         description: A list of connected users.
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: array
+     *               items:
+     *                 $ref: '#/components/schemas/User'
+     *       404:
+     *         description: No connected users found.
+     */
     router.get('/connnected', async (req, res) => {
         const connectedUsers: User[] = await userService.getConnectedUsers();
         if (connectedUsers) {
@@ -67,5 +84,6 @@ export const userRoutes = (userService: UserService): Router => {
             res.status(StatusCodes.NOT_FOUND).json();
         }
     });
+
     return router;
 }
