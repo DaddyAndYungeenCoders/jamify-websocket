@@ -2,6 +2,7 @@ import {Router} from 'express';
 import logger from "../config/logger";
 import {StatusCodes} from "http-status-codes";
 import {UserService} from "../services/user.service";
+import {User} from "../models/interfaces/user/user.types";
 
 /**
  * Defines the routes for user-related operations.
@@ -58,5 +59,13 @@ export const userRoutes = (userService: UserService): Router => {
         }
     });
 
+    router.get('/connnected', async (req, res) => {
+        const connectedUsers: User[] = await userService.getConnectedUsers();
+        if (connectedUsers) {
+            res.status(StatusCodes.OK).json(connectedUsers);
+        } else {
+            res.status(StatusCodes.NOT_FOUND).json();
+        }
+    });
     return router;
 }

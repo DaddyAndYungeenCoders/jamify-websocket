@@ -27,6 +27,10 @@ export const config: Config = {
     jwt: {
         algorithms: ['RS256'] as Algorithm[],
         jwksUri: process.env.JWT_JWKS_URI || 'https://jamify.daddyornot.xyz/jamify-uaa/oauth/.well-known/jwks.json'
+    },
+    engine: {
+        uri: process.env.ENGINE_URI || 'https://jamify.daddyornot.xyz/jamify-engine/api/v1',
+        // uri: process.env.ENGINE_URI || 'http://localhost:8082/api/v1',
     }
 
 };

@@ -16,6 +16,7 @@ import {QueueEnum} from "./models/enums/queue.enum";
 import {QueueMessageHandlers} from "./handlers/queue.handler";
 import {userRoutes} from "./routes/user.route";
 import {UserService} from "./services/user.service";
+import {RequestContext} from "./utils/request-context";
 
 export class App {
     public app: Application;
@@ -42,7 +43,7 @@ export class App {
 
         this.redisService = RedisService.getInstance(config.redis);
         this.roomService = RoomService.getInstance(this.redisService);
-        this.userService = UserService.getInstance(this.redisService);
+        this.userService = UserService.getInstance(config, this.redisService);
         this.wsService = new WebSocketService(this.io, {
             serverId: config.serverId,
             redisService: this.redisService
@@ -79,7 +80,9 @@ export class App {
     }
 
     private initializeMiddlewares(): void {
+        const requestContext = RequestContext.getInstance();
         this.app.use(express.json());
+        this.app.use(requestContext.middleware())
         this.app.use(express.urlencoded({extended: true}));
         this.app.use(cors({
             origin: 'http://localhost:5173', // TODO : change to gateway URL

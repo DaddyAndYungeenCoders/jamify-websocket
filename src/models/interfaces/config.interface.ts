@@ -26,4 +26,7 @@ export interface Config {
         algorithms: Algorithm[];
         jwksUri: string;
     };
+    engine: {
+        uri: string
+    }
 }

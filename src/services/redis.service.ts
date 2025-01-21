@@ -92,10 +92,12 @@ export class RedisService {
                 ]);
             }
 
-            const socket = await this.getSocketFromUserId(userId);
-            if (socket) {
-                await this.redis.del(`socket:${socket}:user`);
-            }
+            const allConnections = await this.getAllUserConnections(userId);
+            await Promise.all(allConnections.map(async (conn) => {
+                await this.redis.del(`socket:${conn.socketId}:user`);
+            }));
+            await this.redis.del(`user:${userId}:connections`);
+
         } catch (error) {
             logger.error(`Error removing user connection: ${error}`);
             throw new Error('Failed to remove user connection');
@@ -162,11 +164,11 @@ export class RedisService {
      */
     async getUserRooms(userId: string): Promise<string[]> {
         const keys = await this.redis.keys(`user:*${userId}*:rooms`); // Trouver toutes les clés correspondantes
-        console.log("Clés trouvées :", keys);
+        // console.log("Clés trouvées :", keys);
         // list of 'user:private-room_123_gze:rooms'
 
         if (keys.length === 0) {
-            console.log("Aucune clé trouvée pour cet utilisateur.");
+            console.error("Aucune clé trouvée pour cet utilisateur.");
             return [];
         } else {
             // get room for each key
@@ -174,7 +176,7 @@ export class RedisService {
                 return key.split(":")[1];
             })
 
-            console.log("Rooms trouvées :", rooms);
+            // console.log("Rooms trouvées :", rooms);
             return rooms.flat();
         }
     }
@@ -310,6 +312,23 @@ export class RedisService {
         } catch (error) {
             logger.error(`Error getting room members: ${error}`);
             throw new Error('Failed to get room members');
+        }
+    }
+
+    /**
+     * Retrieves list of connected users.
+     * @returns {Promise<string[]>} A promise that resolves with an array of user IDs.
+     */
+    async getConnectedUsers(): Promise<string[]> {
+        try {
+            const keys = await this.redis.keys('socket:*:user');
+            const userIds = await Promise.all(keys.map(async key => {
+                return this.redis.get(key);
+            }));
+            return userIds.filter(userId => userId !== null);
+        } catch (error) {
+            logger.error(`Error getting connected users: ${error}`);
+            throw new Error('Failed to get connected users');
         }
     }
 }
