@@ -163,7 +163,29 @@ export class WebSocketService {
             logger.info(`User ${userId} joined ${userRooms.length} rooms`);
         } catch (error) {
             logger.error(`Error joining user rooms: ${error}`);
-            socket.emit('room_join_error', { message: 'Failed to join rooms' });
+            socket.emit('room_join_error', {message: 'Failed to join rooms'});
+        }
+    }
+
+    async addUserToRoom(roomId: string, userId: string) {
+        try {
+            const roomExists = await this.redisService.roomExistsById(roomId);
+            if (!roomExists) {
+                throw new Error(`Room ${roomId} does not exist`);
+            }
+
+            const socket = this.io.sockets.sockets.get(userId);
+                if (socket) {
+                    socket.join(roomId);
+                    logger.info(`User ${userId} joined room ${roomId}`);
+                } else {
+                    logger.warn(`User ${userId} not connected`);
+                }
+
+            // logger.info(`Added user ${usersId[0]} and user ${usersId[1]} users to room ${roomId}`);
+        } catch (error) {
+            logger.error(`Error adding users to room: ${error}`);
+            throw error;
         }
     }
 }

@@ -2,19 +2,23 @@ import {RedisService} from "./redis.service";
 import {Room} from "../models/room.model";
 import {RoomType} from "../models/enums/room-type.enum";
 import {RoomPrefix} from "../models/enums/room-prefix.enum";
+import {WebSocketService} from "./websocket.service";
+import {webcrypto} from "node:crypto";
 
 export class RoomService {
     redisService: RedisService;
+    webSocketService: WebSocketService;
 
     static instance: RoomService;
 
-    private constructor(redisService: RedisService) {
+    private constructor(redisService: RedisService, webSocketService: WebSocketService) {
         this.redisService = redisService;
+        this.webSocketService = webSocketService
     }
 
-    static getInstance(redisService: RedisService): RoomService {
+    static getInstance(redisService: RedisService, webSocketService: WebSocketService): RoomService {
         if (!RoomService.instance) {
-            RoomService.instance = new RoomService(redisService);
+            RoomService.instance = new RoomService(redisService, webSocketService);
         }
         return RoomService.instance
     }
@@ -45,6 +49,7 @@ export class RoomService {
     }
 
     async addUserToRoom(roomId: string, userId: string) {
+        await this.webSocketService.addUserToRoom(roomId, userId);
         await this.redisService.addUserToRoom(roomId, userId);
     }
 

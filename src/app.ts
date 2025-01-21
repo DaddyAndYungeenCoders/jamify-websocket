@@ -42,12 +42,12 @@ export class App {
         });
 
         this.redisService = RedisService.getInstance(config.redis);
-        this.roomService = RoomService.getInstance(this.redisService);
         this.userService = UserService.getInstance(config, this.redisService);
         this.wsService = new WebSocketService(this.io, {
             serverId: config.serverId,
             redisService: this.redisService
         });
+        this.roomService = RoomService.getInstance(this.redisService, this.wsService);
         this.queueService = QueueService.getInstance(config, this.wsService);
         this.queueHandlers = QueueMessageHandlers.getInstance(config, this.wsService);
 
