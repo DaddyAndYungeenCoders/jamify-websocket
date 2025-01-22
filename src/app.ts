@@ -24,7 +24,7 @@ export class App {
     public io: SocketServer;
     private queueService: QueueService;
     private queueHandlers: QueueMessageHandlers;
-    private readonly wsService: WebSocketService;
+    readonly wsService: WebSocketService;
     private readonly redisService: RedisService;
     private readonly roomService: RoomService;
     private readonly userService: UserService;

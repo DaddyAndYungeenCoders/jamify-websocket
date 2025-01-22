@@ -331,4 +331,16 @@ export class RedisService {
             throw new Error('Failed to get connected users');
         }
     }
+
+    /**
+     * Retrieves list of all sockets.
+     */
+    async getAllSockets(): Promise<string[]> {
+        try {
+            return await this.redis.keys('socket:*:user');
+        } catch (error) {
+            logger.error(`Error getting all sockets: ${error}`);
+            throw new Error('Failed to get all sockets');
+        }
+    }
 }

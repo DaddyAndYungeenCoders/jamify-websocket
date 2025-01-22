@@ -192,4 +192,23 @@ export class WebSocketService {
             throw error;
         }
     }
+
+    /**
+     * Cleans up all sockets from Redis.
+     */
+    public async cleanupSockets(): Promise<void> {
+        try {
+            const sockets = await this.redisService.getAllSockets();
+            const cleanupPromises = sockets.map(async (socketId) => {
+                const userId = await this.redisService.getUserIdFromSocket(socketId);
+                if (userId) {
+                    await this.redisService.removeUserConnection(userId, socketId);
+                }
+            });
+            await Promise.all(cleanupPromises);
+            logger.info('All sockets cleaned up from Redis');
+        } catch (error) {
+            logger.error(`Error cleaning up sockets: ${error}`);
+        }
+    }
 }

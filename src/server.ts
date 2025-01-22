@@ -25,6 +25,8 @@ server.listen(PORT, () => {
 const shutdown = async () => {
     logger.info('Shutdown signal received');
 
+    await app.wsService.cleanupSockets();
+
     server.close(() => {
         logger.info('HTTP server closed');
         process.exit(0);
