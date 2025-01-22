@@ -85,7 +85,7 @@ export class App {
         this.app.use(requestContext.middleware())
         this.app.use(express.urlencoded({extended: true}));
         this.app.use(cors({
-            origin: 'https://jamify.daddyornot.xyz',
+            origin: ['https://jamify.daddyornot.xyz', 'http://localhost:80'],
             methods: ['GET', 'POST', 'PUT', 'DELETE'],
             allowedHeaders: ['Content-Type', 'Authorization']
         }));
