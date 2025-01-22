@@ -77,12 +77,9 @@ export const userRoutes = (userService: UserService): Router => {
      *         description: No connected users found.
      */
     router.get('/connnected', async (req, res) => {
+        logger.info("REST - Get all connected users");
         const connectedUsers: User[] = await userService.getConnectedUsers();
-        if (connectedUsers) {
-            res.status(StatusCodes.OK).json(connectedUsers);
-        } else {
-            res.status(StatusCodes.NOT_FOUND).json();
-        }
+        res.status(StatusCodes.OK).json(connectedUsers);
     });
 
     return router;

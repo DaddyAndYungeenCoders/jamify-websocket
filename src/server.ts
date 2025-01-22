@@ -15,7 +15,7 @@ const HOST = config.host || "0.0.0.0";
  * Starts the server and logs the running status.
  */
 server.listen(PORT, () => {
-    logger.info(`Chat MicroService is running on http://${HOST}:${PORT}`);
+    logger.info(`Websocket MicroService is running on http://${HOST}:${PORT}`);
     logger.info(`Swagger documentation available on http://${HOST}:${PORT}/api-docs`);
 });
 
