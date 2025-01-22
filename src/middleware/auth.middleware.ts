@@ -60,6 +60,9 @@ export const authMiddleware: RequestHandler = (
     const authHeader = req.headers.authorization;
     const microserviceToken = req.headers['x-jamify-token'] || req.query.microserviceToken;
 
+    logger.info(`Authenticating request with token: ${authHeader}`);
+    logger.info(`Authenticating request with microservice token: ${microserviceToken}`);
+
     if (authHeader) {
         if (!authHeader?.startsWith('Bearer ')) {
             logger.warn('Authentication failed: No Bearer token provided');
@@ -108,7 +111,7 @@ export const authMiddleware: RequestHandler = (
             );
 
         }
-    } else if (microserviceToken === process.env.MICROSERVICE_TOKEN) {
+    } else if (microserviceToken === config.ws.apiKey) {
         next();
     } else {
         res.status(StatusCodes.UNAUTHORIZED).json({message: 'Unauthorized, no token provided or header invalid'});

@@ -20,7 +20,8 @@ export interface Config {
         channel: {
             message: string;
             notification: string;
-        }
+        },
+        apiKey: string;
     };
     jwt: {
         algorithms: Algorithm[];

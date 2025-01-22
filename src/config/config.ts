@@ -21,8 +21,9 @@ export const config: Config = {
     ws: {
         channel: {
             message: process.env.WS_MESSAGE_CHANNEL || 'new-message',
-            notification: process.env.WS_NOTIFICATION_CHANNEL || 'new-notification'
-        }
+            notification: process.env.WS_NOTIFICATION_CHANNEL || 'new-notification',
+        },
+        apiKey: process.env.WS_API_TOKEN || 'fzef5aez51-faze+zeanfFAZpMa4',
     },
     jwt: {
         algorithms: ['RS256'] as Algorithm[],
