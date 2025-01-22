@@ -275,7 +275,7 @@ export class RedisService {
      * @returns {Promise<boolean>} A promise that resolves with true if the user exists, false otherwise.
      */
     async userExistsById(userId: string): Promise<boolean> {
-        const exists = await this.redis.exists(`user:${userId}`);
+        const exists = await this.redis.exists(`user:${userId}:connections`);
         return exists === 1;
     }
 
