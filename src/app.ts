@@ -11,12 +11,12 @@ import {RoomService} from './services/room.service';
 import logger from './config/logger';
 import {roomRoutes} from './routes/room.route';
 import {setupSwagger} from "./config/swagger";
-import {authMiddleware} from "./middleware/jwt.middleware";
 import {QueueEnum} from "./models/enums/queue.enum";
 import {QueueMessageHandlers} from "./handlers/queue.handler";
 import {userRoutes} from "./routes/user.route";
 import {UserService} from "./services/user.service";
 import {RequestContext} from "./utils/request-context";
+import {authMiddleware} from "./middleware/auth.middleware";
 
 export class App {
     public app: Application;
