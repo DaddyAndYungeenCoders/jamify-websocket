@@ -10,6 +10,16 @@ const options: swaggerJsdoc.Options = {
             title: "API Node.js Websocket Service",
             version: "1.0.0",
             description: "A websocket management service",
+            termsOfService: "http://example.com/terms",
+            contact: {
+                name: "Jamify",
+                email: "contact@exemple.com",
+                url: "http://exemple.com",
+            },
+            license: {
+                name: "Apache 2.0",
+                url: "https://www.apache.org/licenses/LICENSE-2.0.html",
+            },
         },
         servers: [
             {
@@ -18,6 +28,13 @@ const options: swaggerJsdoc.Options = {
             },
         ],
         components: {
+            securitySchemes: {
+                bearerAuth: {
+                    type: "http",
+                    scheme: "bearer",
+                    bearerFormat: "JWT",
+                },
+            },
             schemas: {
                 ChatMessage: {
                     type: "object",
@@ -61,7 +78,7 @@ const options: swaggerJsdoc.Options = {
             },
         },
     },
-    apis: ["./src/routes/*.route.ts"],
+    apis: ["src/routes/*.route.ts"],
 
 };
 
@@ -69,4 +86,8 @@ const swaggerSpec = swaggerJsdoc(options);
 
 export const setupSwagger = (app: Application): void => {
     app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+    app.get("/swagger.json", (req, res) => {
+        res.setHeader("Content-Type", "application/json");
+        res.send(swaggerSpec);
+    });
 };

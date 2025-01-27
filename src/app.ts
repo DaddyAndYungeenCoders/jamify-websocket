@@ -11,15 +11,23 @@ import {RoomService} from './services/room.service';
 import logger from './config/logger';
 import {roomRoutes} from './routes/room.route';
 import {setupSwagger} from "./config/swagger";
+import {QueueEnum} from "./models/enums/queue.enum";
+import {QueueMessageHandlers} from "./handlers/queue.handler";
+import {userRoutes} from "./routes/user.route";
+import {UserService} from "./services/user.service";
+import {RequestContext} from "./utils/request-context";
+import {authMiddleware} from "./middleware/auth.middleware";
 
 export class App {
     public app: Application;
     public server: HttpServer;
     public io: SocketServer;
-    private readonly wsService: WebSocketService;
     private queueService: QueueService;
+    private queueHandlers: QueueMessageHandlers;
+    readonly wsService: WebSocketService;
     private readonly redisService: RedisService;
     private readonly roomService: RoomService;
+    private readonly userService: UserService;
 
     constructor(config: Config) {
         this.app = express();
@@ -34,14 +42,16 @@ export class App {
         });
 
         this.redisService = RedisService.getInstance(config.redis);
-        this.roomService = RoomService.getInstance(this.redisService);
+        this.userService = UserService.getInstance(config, this.redisService);
         this.wsService = new WebSocketService(this.io, {
             serverId: config.serverId,
             redisService: this.redisService
         });
+        this.roomService = RoomService.getInstance(this.redisService, this.wsService);
         this.queueService = QueueService.getInstance(config, this.wsService);
+        this.queueHandlers = QueueMessageHandlers.getInstance(config, this.wsService);
 
-        this.initializeServices();
+        this.initializeQueueService();
         this.initializeMiddlewares();
         this.initializeRoutes();
         this.initializeSwagger();
@@ -49,28 +59,41 @@ export class App {
         this.initializeErrorHandling();
     }
 
-    private async initializeServices(): Promise<void> {
+    private async initializeQueueService(): Promise<void> {
         try {
+            this.queueService.registerQueueHandler(
+                QueueEnum.WS_CHAT_MESSAGE,
+                this.queueHandlers.handleChatMessage.bind(this.queueHandlers)
+            );
+
+            this.queueService.registerQueueHandler(
+                QueueEnum.WS_NOTIFICATION,
+                this.queueHandlers.handleNotification.bind(this.queueHandlers)
+            );
+
             await this.queueService.connect();
             logger.info('Queue service initialized successfully');
         } catch (error) {
-            logger.error(`Error initializing queue service: ${error}`);
+            logger.error('Error initializing queue service:', error);
             throw error;
         }
     }
 
     private initializeMiddlewares(): void {
+        const requestContext = RequestContext.getInstance();
         this.app.use(express.json());
+        this.app.use(requestContext.middleware())
         this.app.use(express.urlencoded({extended: true}));
         this.app.use(cors({
-            origin: 'http://localhost:5173',
+            origin: ['https://jamify.daddyornot.xyz', 'http://localhost:80'],
             methods: ['GET', 'POST', 'PUT', 'DELETE'],
             allowedHeaders: ['Content-Type', 'Authorization']
         }));
     }
 
     private initializeRoutes(): void {
-        this.app.use('/api/rooms', roomRoutes(this.roomService));
+        this.app.use('/api/rooms', authMiddleware, roomRoutes(this.roomService));
+        this.app.use('/api/users', authMiddleware, userRoutes(this.userService));
     }
 
     private initializeSwagger(): void {

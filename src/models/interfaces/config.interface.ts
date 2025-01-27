@@ -1,3 +1,5 @@
+import {Algorithm} from "jsonwebtoken";
+
 export interface Config {
     mode: string;
     port: number;
@@ -13,12 +15,19 @@ export interface Config {
         port: number;
         username: string;
         password: string;
-        queues: {
-            incoming: string;
-            outgoing: string;
-        };
     };
     ws: {
-        messageChannel: string;
+        channel: {
+            message: string;
+            notification: string;
+        },
+        apiKey: string;
     };
+    jwt: {
+        algorithms: Algorithm[];
+        jwksUri: string;
+    };
+    engine: {
+        uri: string
+    }
 }
